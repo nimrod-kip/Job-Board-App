@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://job-board-app-avqf.onrender.com/api/v1';
+const API_BASE_URL = 'https://job-board-app-avqf.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
