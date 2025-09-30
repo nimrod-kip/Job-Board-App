@@ -1,32 +1,27 @@
 import React, { useState } from 'react';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 import { companiesAPI } from '../../services/api';
 
+const validationSchema = Yup.object({
+  name: Yup.string().required('Company name is required'),
+  website: Yup.string().url('Must be a valid URL'),
+  description: Yup.string()
+});
+
 const CompanyForm = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    website: '',
-    description: ''
-  });
   const [alert, setAlert] = useState({ show: false, message: '', type: '' });
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      await companiesAPI.create(formData);
+      await companiesAPI.create(values);
       setAlert({
         show: true,
         message: 'Company created successfully!',
         type: 'success'
       });
-      setFormData({ name: '', website: '', description: '' });
+      resetForm();
     } catch (error) {
       setAlert({
         show: true,
@@ -34,6 +29,7 @@ const CompanyForm = () => {
         type: 'danger'
       });
     }
+    setSubmitting(false);
   };
 
   return (
@@ -47,44 +43,66 @@ const CompanyForm = () => {
             {alert.message}
           </Alert>
         )}
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Company Name *</Form.Label>
-            <Form.Control
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </Form.Group>
+        <Formik
+          initialValues={{
+            name: '',
+            website: '',
+            description: ''
+          }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+        >
+          {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
+            <Form onSubmit={handleSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>Company Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  isInvalid={touched.name && errors.name}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.name}
+                </Form.Control.Feedback>
+              </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Website</Form.Label>
-            <Form.Control
-              type="url"
-              name="website"
-              value={formData.website}
-              onChange={handleChange}
-              placeholder="https://example.com"
-            />
-          </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Website</Form.Label>
+                <Form.Control
+                  type="url"
+                  name="website"
+                  value={values.website}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="https://example.com"
+                  isInvalid={touched.website && errors.website}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.website}
+                </Form.Control.Feedback>
+              </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Description</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Description</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  name="description"
+                  value={values.description}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+              </Form.Group>
 
-          <Button variant="primary" type="submit">
-            Create Company
-          </Button>
-        </Form>
+              <Button variant="primary" type="submit" disabled={isSubmitting}>
+                Create Company
+              </Button>
+            </Form>
+          )}
+        </Formik>
       </Card.Body>
     </Card>
   );

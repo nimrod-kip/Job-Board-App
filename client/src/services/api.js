@@ -1,39 +1,62 @@
-import axios from 'axios';
-
 const API_BASE_URL = 'https://job-board-app-avqf.onrender.com/api';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const fetchAPI = async (endpoint, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw { response: { data: error } };
+  }
+  
+  return { data: await response.json() };
+};
 
 // Users API
 export const usersAPI = {
-  getAll: () => api.get('/users'),
-  create: (userData) => api.post('/users', userData),
+  getAll: () => fetchAPI('/users'),
+  create: (userData) => fetchAPI('/users', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  }),
 };
 
 // Companies API
 export const companiesAPI = {
-  getAll: () => api.get('/companies'),
-  create: (companyData) => api.post('/companies', companyData),
+  getAll: () => fetchAPI('/companies'),
+  create: (companyData) => fetchAPI('/companies', {
+    method: 'POST',
+    body: JSON.stringify(companyData),
+  }),
 };
 
 // Jobs API
 export const jobsAPI = {
-  getAll: () => api.get('/jobs'),
-  getById: (id) => api.get(`/jobs/${id}`),
-  create: (jobData) => api.post('/jobs', jobData),
-  update: (id, jobData) => api.patch(`/jobs/${id}`, jobData),
-  delete: (id) => api.delete(`/jobs/${id}`),
+  getAll: () => fetchAPI('/jobs'),
+  getById: (id) => fetchAPI(`/jobs/${id}`),
+  create: (jobData) => fetchAPI('/jobs', {
+    method: 'POST',
+    body: JSON.stringify(jobData),
+  }),
+  update: (id, jobData) => fetchAPI(`/jobs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(jobData),
+  }),
+  delete: (id) => fetchAPI(`/jobs/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
 // Applications API
 export const applicationsAPI = {
-  getAll: () => api.get('/applications'),
-  create: (applicationData) => api.post('/applications', applicationData),
+  getAll: () => fetchAPI('/applications'),
+  create: (applicationData) => fetchAPI('/applications', {
+    method: 'POST',
+    body: JSON.stringify(applicationData),
+  }),
 };
-
-export default api;

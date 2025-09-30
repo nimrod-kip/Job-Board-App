@@ -1,30 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 import { jobsAPI, companiesAPI } from '../../services/api';
 
+const validationSchema = Yup.object({
+  title: Yup.string().min(3, 'Title must be at least 3 characters').required('Title is required'),
+  location: Yup.string(),
+  salary: Yup.number().min(0, 'Salary must be positive').integer('Salary must be a whole number'),
+  description: Yup.string(),
+  company_id: Yup.number().required('Company is required')
+});
+
 const JobForm = ({ job, onSave }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    location: '',
-    salary: '',
-    description: '',
-    company_id: ''
-  });
   const [companies, setCompanies] = useState([]);
   const [alert, setAlert] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
     loadCompanies();
-    if (job) {
-      setFormData({
-        title: job.title || '',
-        location: job.location || '',
-        salary: job.salary || '',
-        description: job.description || '',
-        company_id: job.company_id || ''
-      });
-    }
-  }, [job]);
+  }, []);
 
   const loadCompanies = async () => {
     try {
@@ -39,18 +33,10 @@ const JobForm = ({ job, onSave }) => {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       if (job) {
-        await jobsAPI.update(job.id, formData);
+        await jobsAPI.update(job.id, values);
         setAlert({
           show: true,
           message: 'Job updated successfully!',
@@ -58,19 +44,13 @@ const JobForm = ({ job, onSave }) => {
         });
         onSave && onSave();
       } else {
-        await jobsAPI.create(formData);
+        await jobsAPI.create(values);
         setAlert({
           show: true,
           message: 'Job created successfully!',
           type: 'success'
         });
-        setFormData({
-          title: '',
-          location: '',
-          salary: '',
-          description: '',
-          company_id: ''
-        });
+        resetForm();
       }
     } catch (error) {
       setAlert({
@@ -79,6 +59,7 @@ const JobForm = ({ job, onSave }) => {
         type: 'danger'
       });
     }
+    setSubmitting(false);
   };
 
   return (
@@ -92,82 +73,110 @@ const JobForm = ({ job, onSave }) => {
             {alert.message}
           </Alert>
         )}
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={6}>
+        <Formik
+          initialValues={{
+            title: job?.title || '',
+            location: job?.location || '',
+            salary: job?.salary || '',
+            description: job?.description || '',
+            company_id: job?.company_id || ''
+          }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+          enableReinitialize
+        >
+          {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
+            <Form onSubmit={handleSubmit}>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Job Title *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="title"
+                      value={values.title}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      isInvalid={touched.title && errors.title}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {errors.title}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Location</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="location"
+                      value={values.location}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Salary</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="salary"
+                      value={values.salary}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      isInvalid={touched.salary && errors.salary}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {errors.salary}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Company *</Form.Label>
+                    <Form.Select
+                      name="company_id"
+                      value={values.company_id}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      isInvalid={touched.company_id && errors.company_id}
+                    >
+                      <option value="">Select a company</option>
+                      {companies.map(company => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      {errors.company_id}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+
               <Form.Group className="mb-3">
-                <Form.Label>Job Title *</Form.Label>
+                <Form.Label>Description</Form.Label>
                 <Form.Control
-                  type="text"
-                  name="title"
-                  value={formData.title}
+                  as="textarea"
+                  rows={4}
+                  name="description"
+                  value={values.description}
                   onChange={handleChange}
-                  required
-                  minLength="3"
+                  onBlur={handleBlur}
                 />
               </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Location</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Salary</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="salary"
-                  value={formData.salary}
-                  onChange={handleChange}
-                  min="0"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Company *</Form.Label>
-                <Form.Select
-                  name="company_id"
-                  value={formData.company_id}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select a company</option>
-                  {companies.map(company => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Description</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={4}
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </Form.Group>
-
-          <Button variant="primary" type="submit">
-            {job ? 'Update Job' : 'Create Job'}
-          </Button>
-        </Form>
+              <Button variant="primary" type="submit" disabled={isSubmitting}>
+                {job ? 'Update Job' : 'Create Job'}
+              </Button>
+            </Form>
+          )}
+        </Formik>
       </Card.Body>
     </Card>
   );
